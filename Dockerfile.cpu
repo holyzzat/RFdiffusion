@@ -7,27 +7,36 @@ COPY . /app/RFdiffusion/
 # 시스템 패키지 설치
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    git \                 # Git 설치
-    python3.9 \           # Python 3.9 설치
-    python3-pip && \      # pip 설치
-    apt-get clean         # 불필요한 캐시 정리
+    git \
+    python3.9 \
+    python3-pip && \
+    apt-get clean
 
-# pip 업그레이드 및 PyTorch + 기타 패키지 설치
+# pip 업그레이드 및 NumPy 버전 고정 (NumPy 2.x 비호환 문제 해결)
 RUN python3.9 -m pip install -U pip && \
-    pip install \
-    torch==1.12.1 \                  # PyTorch CPU 버전
-    dgl==1.0.2 -f https://data.dgl.ai/wheels/repo.html \  # 그래프 학습용 라이브러리 DGL
-    e3nn==0.3.3 \                    # 3차원 대칭 신경망용 라이브러리
-    wandb==0.12.0 \                  # 실험 추적용 툴
-    decorator==5.1.0 \               # 데코레이터 기능 (의존성)
-    hydra-core==1.3.2 \              # 설정 파일 체계
-    pyrsistent==0.19.3               # 불변 데이터 구조 지원 라이브러리
+    pip install numpy==1.23.5
 
-# 작업 폴더 설정 (실행 디렉토리)
+# PyTorch + 기타 종속 라이브러리 설치
+RUN pip install \
+    torch==1.12.1 \
+    dgl==1.0.2 -f https://data.dgl.ai/wheels/repo.html \
+    e3nn==0.3.3 \
+    wandb==0.12.0 \
+    decorator==5.1.0 \
+    hydra-core==1.3.2 \
+    pyrsistent==0.19.3
+
+# SE3Transformer 설치 (소스코드로 제공되는 경우)
+RUN pip install /app/RFdiffusion/env/SE3Transformer
+
+# RFdiffusion 패키지 자체 설치 (import 오류 방지용)
+RUN pip install /app/RFdiffusion --no-deps
+
+# 작업 디렉토리 설정
 WORKDIR /app/RFdiffusion
 
-# 환경 변수 설정 (DGL이 PyTorch 백엔드를 쓰도록)
+# DGL이 PyTorch 백엔드를 사용하도록 지정
 ENV DGLBACKEND="pytorch"
 
-# 컨테이너 실행 시 자동으로 이 파이썬 파일 실행
+# 컨테이너 실행 시 자동으로 run_inference.py 실행
 ENTRYPOINT ["python3.9", "scripts/run_inference.py"]
